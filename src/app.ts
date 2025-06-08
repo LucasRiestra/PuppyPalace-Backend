@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
+import usuariosRoutes from './routes/usuarios';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -9,10 +10,13 @@ const prisma = new PrismaClient();
 app.use(cors());
 app.use(express.json());
 
-// Ruta básica
+// Rutas
 app.get('/', (req: Request, res: Response) => {
   res.json({ message: 'Bienvenido a PuppyPalace API' });
 });
+
+// Rutas de usuarios
+app.use('/api/usuarios', usuariosRoutes);
 
 // Manejo de errores
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
