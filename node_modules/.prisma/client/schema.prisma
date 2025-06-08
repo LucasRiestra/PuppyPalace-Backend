@@ -1,0 +1,124 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id                String       @id @default(auto()) @map("_id") @db.ObjectId
+  nombre            String
+  correo_electronico String      @unique
+  contrasena        String
+  telefono          String?
+  direccion         String?
+  es_cuidador       Boolean      @default(false)
+  fecha_registro    DateTime     @default(now())
+  
+  // Relaciones
+  cuidador          Cuidador?
+  solicitudes       Solicitud[]  @relation("usuario_solicitudes")
+  comentarios       Comentario[] @relation("usuario_comentarios")
+  autenticacion     Autenticacion[]
+  mensajes_enviados Mensaje[]    @relation("remitente_mensajes")
+  mensajes_recibidos Mensaje[]   @relation("destinatario_mensajes")
+}
+
+model Cuidador {
+  id                  String         @id @default(auto()) @map("_id") @db.ObjectId
+  usuario_id          String         @unique @db.ObjectId
+  experiencia         String?
+  tipo_servicios      String[]
+  calificacion_promedio Float?
+  cantidad_servicios  Int            @default(0)
+  
+  // Relaciones
+  usuario             Usuario        @relation(fields: [usuario_id], references: [id])
+  disponibilidades    Disponibilidad[]
+  solicitudes         Solicitud[]    @relation("cuidador_solicitudes")
+}
+
+model Servicio {
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  nombre      String
+  descripcion String?
+  precio_base Float?
+  
+  // Relaciones
+  disponibilidades Disponibilidad[]
+  solicitudes      Solicitud[]
+}
+
+model Disponibilidad {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  cuidador_id     String    @db.ObjectId
+  fecha_disponible DateTime
+  servicio_id     String    @db.ObjectId
+  
+  // Relaciones
+  cuidador        Cuidador  @relation(fields: [cuidador_id], references: [id])
+  servicio        Servicio  @relation(fields: [servicio_id], references: [id])
+}
+
+model Solicitud {
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
+  usuario_id      String      @db.ObjectId
+  cuidador_id     String      @db.ObjectId
+  servicio_id     String      @db.ObjectId
+  fecha_solicitada DateTime   @default(now())
+  estado          String      // "pendiente", "aceptada", "rechazada"
+  fecha_respuesta DateTime?
+  
+  // Relaciones
+  usuario         Usuario     @relation("usuario_solicitudes", fields: [usuario_id], references: [id])
+  cuidador        Cuidador    @relation("cuidador_solicitudes", fields: [cuidador_id], references: [id])
+  servicio        Servicio    @relation(fields: [servicio_id], references: [id])
+  comentario      Comentario?
+  mensajes        Mensaje[]
+}
+
+model Comentario {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  solicitud_id String    @unique @db.ObjectId
+  usuario_id   String    @db.ObjectId
+  calificacion Int
+  comentario   String?
+  fecha        DateTime  @default(now())
+  
+  // Relaciones
+  solicitud    Solicitud @relation(fields: [solicitud_id], references: [id])
+  usuario      Usuario   @relation("usuario_comentarios", fields: [usuario_id], references: [id])
+}
+
+model Autenticacion {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  usuario_id String    @db.ObjectId
+  token      String    @unique
+  expiracion DateTime
+  tipo       String    // "local", "OAuth"
+  
+  // Relaciones
+  usuario    Usuario   @relation(fields: [usuario_id], references: [id])
+}
+
+model Mensaje {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  remitente_id    String    @db.ObjectId
+  destinatario_id String    @db.ObjectId
+  contenido       String
+  fecha           DateTime  @default(now())
+  solicitud_id    String?   @db.ObjectId
+  
+  // Relaciones
+  remitente       Usuario   @relation("remitente_mensajes", fields: [remitente_id], references: [id])
+  destinatario    Usuario   @relation("destinatario_mensajes", fields: [destinatario_id], references: [id])
+  solicitud       Solicitud? @relation(fields: [solicitud_id], references: [id])
+}
